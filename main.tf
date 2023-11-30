@@ -69,3 +69,8 @@ resource "aws_security_group" "dev_sg" {
   }
 
 }
+
+resource "aws_key_pair" "lhi_auth"{
+  key_name = "lhikey"
+  public_key = file("~/.ssh/lhikey.pub")
+}
