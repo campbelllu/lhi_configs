@@ -70,7 +70,24 @@ resource "aws_security_group" "dev_sg" {
 
 }
 
-resource "aws_key_pair" "lhi_auth"{
-  key_name = "lhikey"
+resource "aws_key_pair" "lhi_auth" {
+  key_name   = "lhikey"
   public_key = file("~/.ssh/lhikey.pub")
+}
+
+resource "aws_instance" "dev_node" {
+  instance_type          = "t2.micro"
+  ami                    = data.aws_ami.server_ami.id
+  key_name               = aws_key_pair.lhi_auth.id
+  vpc_security_group_ids = [aws_security_group.dev_sg.id]
+  subnet_id              = aws_subnet.public_subnet.id
+  user_data = file("userdata.tpl")
+
+  tags = {
+    Name = "dev_node"
+  }
+
+  # root_block_device{
+  #   volume_size = 8 #already default
+  # }
 }
