@@ -6,7 +6,7 @@ resource "aws_vpc" "dev" {
   enable_dns_support   = true
 
   tags = {
-    Name = "dev"
+    Name = "dev-vpc"
   }
 }
 
@@ -17,7 +17,7 @@ resource "aws_subnet" "public_subnet" {
   availability_zone       = "us-east-2a"
 
   tags = {
-    Name = "dev-public"
+    Name = "dev-public-subnet"
   }
 }
 
@@ -54,11 +54,36 @@ resource "aws_security_group" "dev_sg" {
   description = "dev security group"
   vpc_id      = aws_vpc.dev.id
 
+  # ingress {
+  #   description = "All you can access, buffet."
+  #   from_port   = 0
+  #   to_port     = 0
+  #   protocol    = "-1"
+  #   cidr_blocks = ["0.0.0.0/0"] #What can get into subnet? Only for demonstration purposes! Always only allow specifics for ingress!! Also applies for below examples.
+  # }
+
   ingress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"] #What can get into subnet? Only for demonstration purposes! Always only allow specifics for ingress!!
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] #Remember to later refine as app requirements denote.
+  }
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] #Remember to later refine as app requirements denote.
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] #Remember to later refine as app requirements denote.
   }
 
   egress {
@@ -81,7 +106,7 @@ resource "aws_instance" "dev_node" {
   key_name               = aws_key_pair.lhi_auth.id
   vpc_security_group_ids = [aws_security_group.dev_sg.id]
   subnet_id              = aws_subnet.public_subnet.id
-  user_data = file("userdata.tpl")
+  user_data              = file("userdata.tpl")
 
   tags = {
     Name = "dev_node"
