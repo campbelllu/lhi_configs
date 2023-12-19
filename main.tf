@@ -16,7 +16,7 @@ resource "aws_vpc" "dev" {
 #sg currently looks highly permissive to my junior's eye
 resource "aws_security_group" "dev_sg" {
   name        = "dev_sg"
-  description = "dev security group"
+  description = "dev public subnet security group"
   vpc_id      = aws_vpc.dev.id
 
   # ingress {
@@ -123,17 +123,82 @@ resource "aws_instance" "dev_node" {
 #Needs subnet, route table, assoc rt+sn, somehow ec2's and db need to talk(how do private and public subnets talk? thru the next part?), sg(the next part[spoiler: it wasn't the next part. sg's act on instance lvl. acl's act on subnet-lvl, in-n-out of vpc, my dude.]), rds('s?) for apps
 #answers above q? https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/security_group 
 #also look at __ just to be safe: an acl for the private sn: https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/network_acl
-## more documentation to connect ec2 and rds https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.Scenarios.html
+## more documentation to connect ec2 and rds https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/USER_VPC.Scenarios.html -more general, used, good to del
 ##
 #Public Subnet
 resource "aws_subnet" "private_subnet" {
   vpc_id                  = aws_vpc.dev.id
   cidr_block              = "10.100.2.0/24"
   # map_private_ip_on_launch = true
-  # map_public_ip_on_launch = true
+  map_public_ip_on_launch = false
   availability_zone       = "us-east-2a"
 
   tags = {
-    Name = "dev-public-subnet"
+    Name = "dev-private-subnet"
   }
 }
+
+resource "aws_security_group" "dev_priv_sg"{
+  name        = "dev_priv_sg"
+  description = "dev private subnet security group"
+  vpc_id      = aws_vpc.dev.id
+
+  ingress {
+    description = "HTTPS"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["10.100.1.0/24"] 
+  }
+
+  ingress {
+    description = "HTTP"
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["10.100.1.0/24"] 
+  }
+
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["10.100.1.0/24"] 
+  }
+
+  #Also need ingress and egress for appropriate DB ports.
+
+  egress { #We can only talk to the instances in the public subnet.
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["10.100.1.0/24"] #Where can subnet get to? Gotta figure out if this is necessary to ever update RDS, or through NAT, or not at all.
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"] #Where can subnet get to? Gotta figure out if this is necessary to ever update RDS, or through NAT, or not at all.
+  }
+}
+
+#notes
+# resource "aws_eip" "nat" {
+#   vpc = true
+# }
+
+# resource "aws_nat_gateway" "nat-gw" {
+#   allocation_id = aws_eip.nat.id
+#   subnet_id     = aws_subnet.public-subnet.id
+#   depends_on    = [aws_internet_gateway.internet-gw]
+# }
+
+# resource "aws_route_table" "private-rt" {
+#   vpc_id = aws_vpc.main.id
+#   route {
+#     cidr_block     = "0.0.0.0/0"
+#     nat_gateway_id = aws_nat_gateway.nat-gw.id
+#   }
+# }
