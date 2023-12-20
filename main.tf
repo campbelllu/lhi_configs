@@ -185,16 +185,14 @@ resource "aws_security_group" "dev_priv_sg"{
 }
 
 #notes
-# resource "aws_eip" "nat" {
-#   vpc = true
-# }
-
+#nat gateway example
 # resource "aws_nat_gateway" "nat-gw" {
 #   allocation_id = aws_eip.nat.id
 #   subnet_id     = aws_subnet.public-subnet.id
 #   depends_on    = [aws_internet_gateway.internet-gw]
 # }
 
+#route table example: combining rt's and routes
 # resource "aws_route_table" "private-rt" {
 #   vpc_id = aws_vpc.main.id
 #   route {
